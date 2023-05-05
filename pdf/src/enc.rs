@@ -260,7 +260,6 @@ pub fn flate_decode(data: &[u8], params: &LZWFlateParams) -> Result<Vec<u8>> {
     let decoded = match inflate_bytes_zlib(data) {
         Ok(data) => data,
         Err(_) => {
-            std::fs::write("/tmp/data", data).unwrap();
             info!("invalid zlib header. trying without");
             inflate_bytes(data)?
         }
@@ -373,8 +372,6 @@ pub fn fax_decode(data: &[u8], params: &CCITTFaxDecodeParams) -> Result<Vec<u8>>
 
 pub fn run_length_decode(data: &[u8]) -> Result<Vec<u8>> {
     // Used <http://benno.id.au/refs/PDFReference15_v5.pdf> as specification
-    use std::io::*;
-
     let mut buf = Vec::new();
     let d = data;
     let mut c = 0;
@@ -425,6 +422,7 @@ pub fn decode(data: &[u8], filter: &StreamFilter) -> Result<Vec<u8>> {
         StreamFilter::LZWDecode(ref params) => lzw_decode(data, params),
         StreamFilter::FlateDecode(ref params) => flate_decode(data, params),
         StreamFilter::RunLengthDecode => run_length_decode(data),
+        StreamFilter::DCTDecode(ref params) => dct_decode(data, params),
 
         _ => bail!("unimplemented {filter:?}"),
     }

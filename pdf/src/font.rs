@@ -6,7 +6,6 @@ use crate::encoding::Encoding;
 use std::collections::HashMap;
 use crate::parser::{Lexer, parse_with_lexer, ParseFlags};
 use std::convert::TryInto;
-use std::borrow::Cow;
 use std::sync::Arc;
 use istring::SmallString;
 use datasize::DataSize;
@@ -128,6 +127,11 @@ impl Object for Font {
         })
     }
 }
+impl ObjectWrite for Font {
+    fn to_primitive(&self, _update: &mut impl Updater) -> Result<Primitive> {
+        unimplemented!()
+    }
+}
 
 
 #[derive(Debug)]
@@ -204,7 +208,7 @@ impl Font {
         }
     }
     pub fn is_cid(&self) -> bool {
-        matches!(self.data, FontData::CIDFontType0(_) | FontData::CIDFontType2(_))
+        matches!(self.data, FontData::Type0(_) | FontData::CIDFontType0(_) | FontData::CIDFontType2(_))
     }
     pub fn cid_to_gid_map(&self) -> Option<&CidToGidMap> {
         match self.data {
@@ -473,10 +477,10 @@ pub fn utf16be_to_char(
     char::decode_utf16(data.chunks(2).map(|w| u16::from_be_bytes([w[0], w[1]])))
 }
 /// converts UTF16-BE to a string replacing illegal/unknown characters
-pub fn utf16be_to_string_lossy(data: &[u8]) -> pdf::error::Result<String> {
-    Ok(utf16be_to_char(data)
+pub fn utf16be_to_string_lossy(data: &[u8]) -> String {
+    utf16be_to_char(data)
         .map(|r| r.unwrap_or(std::char::REPLACEMENT_CHARACTER))
-        .collect())
+        .collect()
 }
 /// converts UTF16-BE to a string errors out in illegal/unknonw characters
 pub fn utf16be_to_string(data: &[u8]) -> pdf::error::Result<SmallString> {
@@ -509,7 +513,7 @@ fn parse_cmap(data: &[u8]) -> Result<ToUnicodeMap> {
                         let bytes = unicode_data.as_bytes();
                         match utf16be_to_string(bytes) {
                             Ok(unicode) => map.insert(cid, unicode),
-                            Err(e) => warn!("invalid unicode for cid {cid} {bytes:?}"),
+                            Err(_) => warn!("invalid unicode for cid {cid} {bytes:?}"),
                         }
                     }
                     _ => break,
@@ -535,7 +539,7 @@ fn parse_cmap(data: &[u8]) -> Result<ToUnicodeMap> {
                         for cid in cid_start..=cid_end {
                             match utf16be_to_string(&unicode_data) {
                                 Ok(unicode) => map.insert(cid, unicode),
-                                Err(e) => warn!("invalid unicode for cid {cid} {unicode_data:?}"),
+                                Err(_) => warn!("invalid unicode for cid {cid} {unicode_data:?}"),
                             }
                             let last = unicode_data.last_mut().unwrap();
                             if *last < 255 {
@@ -557,7 +561,7 @@ fn parse_cmap(data: &[u8]) -> Result<ToUnicodeMap> {
                             let bytes = unicode_data.as_string()?.as_bytes();
                             match utf16be_to_string(bytes) {
                                 Ok(unicode) => map.insert(cid, unicode),
-                                Err(e) => warn!("invalid unicode for cid {cid} {bytes:?}"),
+                                Err(_) => warn!("invalid unicode for cid {cid} {bytes:?}"),
                             }
                         }
                     }
@@ -620,6 +624,6 @@ mod tests {
             assert_eq!(r.to_string(), "UTF16 decode error");
         }
         assert_eq!(utf16be_to_string(&v[..8]).unwrap(), String::from("𝄞mu"));
-        assert_eq!(utf16be_to_string_lossy(&v).unwrap(), lossy);
+        assert_eq!(utf16be_to_string_lossy(&v), lossy);
     }
 }

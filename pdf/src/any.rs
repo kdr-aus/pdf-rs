@@ -1,7 +1,6 @@
 use std::any::TypeId;
 use std::rc::Rc;
 use std::sync::Arc;
-use globalcache::ValueSize;
 use datasize::DataSize;
 use crate::object::{Object};
 use crate::error::{Result, PdfError};
@@ -25,7 +24,7 @@ impl<T> AnyObject for T
     }
 }
 
-#[derive(Clone)]
+#[derive(DataSize)]
 pub struct Any(Rc<dyn AnyObject>);
 
 impl Any {
@@ -56,8 +55,16 @@ impl<T: AnyObject + 'static> From<Rc<T>> for Any {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, DataSize)]
 pub struct AnySync(Arc<dyn AnyObject+Sync+Send>);
+
+#[cfg(feature="cache")]
+impl globalcache::ValueSize for AnySync {
+    #[inline]
+    fn size(&self) -> usize {
+        self.0.size()
+    }
+}
 
 impl AnySync {
     pub fn downcast<T>(self) -> Result<Arc<T>> 
@@ -84,11 +91,6 @@ impl AnySync {
 impl<T: AnyObject + Sync + Send + 'static> From<Arc<T>> for AnySync {
     fn from(t: Arc<T>) -> Self {
         AnySync::new(t)
-    }
-}
-impl ValueSize for AnySync {
-    fn size(&self) -> usize {
-        self.0.size()
     }
 }
 fn type_mismatch<T: AnyObject + 'static>(name: &str) -> PdfError {

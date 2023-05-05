@@ -238,8 +238,6 @@ impl OpBuilder {
         let mut buffer = Vec::with_capacity(5);
 
         loop {
-            let trailing = lexer.get_remaining_slice();
-
             let backup_pos = lexer.get_pos();
             let obj = parse_with_lexer(&mut lexer, resolve, ParseFlags::ANY);
             match obj {
@@ -878,14 +876,14 @@ impl Default for Matrix {
     }
 }
 impl Object for Matrix {
-    fn from_primitive(p: Primitive, resolve: &impl Resolve) -> Result<Self> {
+    fn from_primitive(p: Primitive, _resolve: &impl Resolve) -> Result<Self> {
         matrix(&mut p.into_array()?.into_iter())
     }
 }
 impl ObjectWrite for Matrix {
     fn to_primitive(&self, update: &mut impl Updater) -> Result<Primitive> {
         let Matrix { a, b, c, d, e, f } = *self;
-        Primitive::array::<f32, _, _, _>([a, b, c, d, e, f].into_iter(), update)
+        Primitive::array::<f32, _, _, _>([a, b, c, d, e, f].iter(), update)
     }
 }
 #[cfg(feature = "euclid")]

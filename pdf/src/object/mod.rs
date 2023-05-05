@@ -226,6 +226,9 @@ impl<T> RcRef<T> {
     pub fn get_ref(&self) -> Ref<T> {
         Ref::new(self.inner)
     }
+    pub fn data(&self) -> &Shared<T> {
+        &self.data
+    }
 }
 impl<T: Object + std::fmt::Debug + DataSize> Object for RcRef<T> {
     fn from_primitive(p: Primitive, resolve: &impl Resolve) -> Result<Self> {
@@ -286,6 +289,12 @@ impl<T> MaybeRef<T> {
         match *self {
             MaybeRef::Indirect(ref r) => Some(r.get_ref()),
             _ => None
+        }
+    }
+    pub fn data(&self) -> &Shared<T> {
+        match *self {
+            MaybeRef::Direct(ref t) => t,
+            MaybeRef::Indirect(ref r) => &r.data
         }
     }
 }
